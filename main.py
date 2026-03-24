@@ -5,8 +5,6 @@ import json
 import os
 from datetime import datetime, timedelta
 import asyncio
-from flask import Flask
-import threading
 import aiohttp
 
 # ---------- إعدادات البوت ----------
@@ -455,8 +453,6 @@ class WarnLogsView(discord.ui.View):
         self.all_warns = []
         if self.guild_id in warn_logs:
             for user_id, warns in warn_logs[self.guild_id].items():
-                user = None
-                # محاولة جلب اسم المستخدم من السيرفر إذا كان البوت يعرف العضو (يمكن تحسينها)
                 user_name = f"مستخدم {user_id}"
                 for idx, warn in enumerate(warns, start=1):
                     self.all_warns.append({
@@ -471,15 +467,13 @@ class WarnLogsView(discord.ui.View):
         self.max_page = (len(self.all_warns) - 1) // 10 if self.all_warns else 0
 
     def get_embed(self):
-        self._build_warns()  # إعادة بناء القائمة للحصول على أحدث البيانات
+        self._build_warns()
         if not self.all_warns:
             embed = discord.Embed(title="سجلات التحذيرات", description="لا توجد سجلات تحذيرات حتى الآن.", color=discord.Color.dark_gray())
             return embed
-
         start = self.page * 10
         end = start + 10
         page_warns = self.all_warns[start:end]
-
         embed = discord.Embed(title="سجلات التحذيرات", color=discord.Color.dark_orange())
         embed.set_footer(text=f"الصفحة {self.page+1} من {self.max_page+1}")
         for w in page_warns:
@@ -698,23 +692,10 @@ async def on_ready():
     await bot.change_presence(activity=discord.Game(name="تفعيل نظام الخط: أرسل مع صورة | !help"))
     clean_spam_tracker.start()
 
-# ---------- خادم Flask لإبقاء البوت شغالاً ----------
-app = Flask('')
-@app.route('/')
-def home():
-    return "البوت يعمل بشكل جيد!"
-def run_flask():
-    app.run(host='0.0.0.0', port=8080, debug=False)
-def keep_alive():
-    t = threading.Thread(target=run_flask)
-    t.daemon = True
-    t.start()
-
 # ---------- تشغيل البوت ----------
 if __name__ == "__main__":
     TOKEN = os.getenv('BOT_TOKEN')
     if not TOKEN:
         print("❌ لم يتم العثور على التوكن. تأكد من تعيين BOT_TOKEN في متغيرات البيئة.")
     else:
-        keep_alive()
         bot.run(TOKEN)
